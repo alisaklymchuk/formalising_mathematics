@@ -31,7 +31,6 @@ example (P Q : Prop) (hP : P ∧ Q) : P ∨ Q := by
   exact hp
 
 example (h : ¬ True) : False := by
-  by_contra T
   trivial
 
 example (P : Prop) (hP : P) : ¬ ¬ P := by
