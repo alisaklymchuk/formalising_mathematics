@@ -18,11 +18,13 @@ Do not use other tactics or term mode (if you know what that is).
 example (P Q : Prop) (hP : P) (hQ : P → Q) : P ∧ Q := by
   constructor
   · exact hP
-  · exact hQ hP
+  · apply hQ
+    exact hP
 
 example (P Q : Prop) (hP : P ∨ Q) (hQ : P → Q) : Q := by
   rcases hP with hp | hq
-  · exact hQ hp
+  · apply hQ
+    exact hp
   · exact hq
 
 example (P Q : Prop) (hP : P ∧ Q) : P ∨ Q := by
@@ -31,8 +33,10 @@ example (P Q : Prop) (hP : P ∧ Q) : P ∨ Q := by
   exact hp
 
 example (h : ¬ True) : False := by
-  trivial
+  apply h
+  exact trivial
 
 example (P : Prop) (hP : P) : ¬ ¬ P := by
   by_contra nP
-  exact nP hP
+  apply nP
+  exact hP
