@@ -224,32 +224,33 @@ learned so far (`exact`, `intro`, `apply`, `specialize`, `have`, `suffices`,
 /-- If we know `P`, and we also know `P → Q`, we can deduce `Q`.
 This is called "modus ponens" by logicians. -/
 example : P → (P → Q) → Q := by
-  intro hP hPQ
+  intro P hPQ
   apply hPQ
-  exact hP
+  exact P
+
+
 
 
 
 /-- `→` is transitive. -/
 example : (P → Q) → (Q → R) → P → R := by
   intro hPQ hQR hP
-  specialize hPQ hP
   apply hQR
-  exact hPQ
-
+  apply hPQ
+  exact hP
 
 /-- If `h : P → Q → R` with goal `⊢ R`, then `apply h` will give two goals! -/
 example : (P → Q → R) → (P → Q) → P → R := by
-  intro h hPQ hP
-  apply h
+  intro hPQR hPQ hP
+  apply hPQR
   · exact hP
   · apply hPQ
     exact hP
 
 /-- `∨` is symmetric. -/
 example : P ∨ Q → Q ∨ P := by
-  intro PorQ
-  rcases PorQ with hP | hQ
+  intro PoQ
+  rcases PoQ with hP | hQ
   · right
     exact hP
   · left
@@ -267,69 +268,62 @@ example : P ∧ Q → Q ∧ P := by
 
 /-- `∧` is transitive. -/
 example : P ∧ Q → Q ∧ R → P ∧ R := by
-  intro PnQ QnR
-  rcases PnQ with ⟨hP, hQ⟩
-  rcases QnR with ⟨hQ, hR⟩
-  exact ⟨hP, hR⟩
+
 
 example : P ∨ Q → (P → R) → (Q → R) → R := by
-  intro PorQ hPR hQR
-  rcases PorQ with hP | hQ
-  · exact hPR hP
-  · exact hQR hQ
 
 
 example : (P → Q) → P ∨ R → Q ∨ R := by
   intro hPQ PoR
-  rcases PoR with hQ | hR
+  rcases PoR with hP | hR
   · left
-    exact hPQ hQ
+    apply hPQ
+    exact hP
   · right
     exact hR
 
 example : P → True := by
-  intro hP
-  trivial
+  intro P
+  exact trivial
 
 example : False → P := by
   intro F
-  by_contra hP
+  by_contra
   exact F
 
 
 example : ¬ True → P := by
   intro nT
-  by_contra hP
-  exact nT trivial
+  by_contra nP
+  apply nT
+  exact trivial
 
 
 example : P → ¬ False := by
-  intro hP
-  by_contra F
-  exact F
+
 
 example : ¬ P → P → Q := by
-  intro nP hP
-  by_contra hQ
-  exact nP hP
+
 
 /-- If we know `P → Q`, and we also know `¬ Q`, we can deduce `¬ P`.
 This is called "modus tollens" by logicians. -/
 example : (P → Q) → ¬ Q → ¬ P := by
-  intro hPQ nQ
-  by_contra hP
-  exact nQ (hPQ hP)
+  intro hPQ nQ hP
+  apply nQ
+  specialize hPQ hP
+  exact hPQ
 
 example : (¬ Q → ¬ P) → P → Q := by
-  intro hnQnP hP
+  intro nQnP hP
   by_contra nQ
-  specialize hnQnP nQ
-  exact hnQnP hP
+  specialize nQnP nQ
+  apply nQnP
+  exact hP
+
+
 
 example : (P → Q) → ((P → Q) → P) → Q := by
-  intro hPQ h
-  specialize h hPQ
-  exact hPQ h
+
 
 example : ((P → Q) → R) → ((Q → R) → P) → ((R → P) → Q) → P := by
   intro PQR QRP RPQ
@@ -345,3 +339,8 @@ example : ((Q → P) → P) → (Q → R) → (R → P) → P := by
   apply QPP
   intro hQ
   exact RP (QR hQ)
+
+example (P : Prop) (hP : P) : P ∧ P := by
+  constructor
+  · exact hP
+  · exact hP
