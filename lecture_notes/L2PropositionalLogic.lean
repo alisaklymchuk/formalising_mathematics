@@ -224,9 +224,9 @@ learned so far (`exact`, `intro`, `apply`, `specialize`, `have`, `suffices`,
 /-- If we know `P`, and we also know `P → Q`, we can deduce `Q`.
 This is called "modus ponens" by logicians. -/
 example : P → (P → Q) → Q := by
-  intro P hPQ
+  intro hP hPQ
   apply hPQ
-  exact P
+  exact hP
 
 
 
