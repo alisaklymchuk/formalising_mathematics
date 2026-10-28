@@ -11,6 +11,7 @@ public import Mathlib.Basic.ENNReal.BigOperators
 #check Finset.sum_pos_iff
 
 open scoped ENNReal
+set_option linter.unusedSectionVars false
 
 -- PROBABILITY MEASURES DEFINITIONS AND LEMMAS
 
@@ -71,11 +72,9 @@ theorem pos_posterior (joint : Θ → PMF (E × Y))
     exact hjpos θ x y
   · exact noninf_marginal (joint : Θ → PMF (E × Y)) θ y
 
-
-
-
-
-#check ne_of_gt
+noncomputable def Q (θ θ_t : Θ) (y : Y) : ℝ :=
+  ∑ x : E,
+  (posterior joint θ_t x y).toReal * Real.log (joint θ (x, y)).toReal
 
 
 
