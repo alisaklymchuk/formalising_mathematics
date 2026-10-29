@@ -85,6 +85,3 @@ Q(θ', θ)=∑ (x ∈ E) p_θ(x | y) log p_θ'(x,y).
 where θ is is the current parameter, used to calculate the posterior
 and θ' is the candidate next parameter
 (the EM algorithm then takes the argmax over θ' as the next parameter in the sequence) -/
-
-def Q (θ' θ : Θ) : ℝ :=
-  ∑ x : E posterior θ (x, y) * Real.log (joint θ' (x, y))
