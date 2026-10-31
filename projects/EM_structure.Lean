@@ -15,30 +15,44 @@ set_option linter.unusedSectionVars false
 
 variable {Θ E Y : Type*} [Fintype E] [Nonempty E]
 
--- I define joint as the function from the parameter space
--- to a particular PMF parameterised by that theta
--- We will assume that joint is positive everywhere
---(i. e. non-zero, since PMFs are already non-negatives
+/-- A finite latent-variable model with a strictly positive joint probability mass function. -/
 structure EMModel (Θ E Y : Type*) [Fintype E] [Nonempty E] where
+  /-- joint defines the joint probability mass function for a given parameter θ -/
   joint : Θ → PMF (E × Y)
-  joint_pos : ∀ (θ : Θ) (x : E) (y : Y), joint θ (x, y) > 0
+  /-- I assume that the PMFs are always positive (i. e. non-zero) -/
+  joint_pos : ∀ (θ : Θ) (x : E) (y : Y), 0 < joint θ (x, y)
 
+/-- Marginal likelihood of observing data y under the model parameter θ -/
 noncomputable def EMModel.marginal (M : EMModel Θ E Y)
 (θ : Θ) (y : Y) : ENNReal :=
 ∑ x : E, M.joint θ (x, y)
 
+/-- The posterior distribution of the latent variable x given the obervation y
+under the model parameter θ -/
 noncomputable def EMModel.posterior (M : EMModel Θ E Y)
 (θ : Θ) (x : E) (y : Y) : ENNReal :=
 M.joint θ (x, y) / M.marginal θ y
 
-noncomputable def EMmodel.Q (M : EMModel Θ E Y)
+/-- The Q function is the expectation wrt to the posterior under parameter θ_t (current best)
+of the marginal log-likelihood under parameter θ
+(next iteration of the algorithm finds the θ that maximizes Q) -/
+noncomputable def EMModel.Q (M : EMModel Θ E Y)
 (θ θ_t : Θ) (y : Y) :=
 ∑ x : E, (M.posterior θ_t x y).toReal * Real.log (M.joint θ (x, y)).toReal
 
+/-- IsQMaximizingStep defines what it means for a θ update to maximize the Q-function. -/
+def EMModel.IsQMaximizer (M : EMModel Θ E Y)
+(y : Y) (θ_new θ_old : Θ) : Prop :=
+  ∀ θ : Θ, M.Q θ θ_old y ≤ M.Q θ_new θ_old y
+
+/-- IsQMaximizingSeq defines what it means for a sequence of θs to be a sequence of Q-maximizers -/
+def EMModel.IsQMaximizingSeq (M : EMModel Θ E Y)
+(y : Y) (θs : ℕ → Θ) : Prop :=
+  ∀ t : ℕ, M.IsQMaximizer y (θs t) (θs (t+1))
+
 theorem EMModel.pos_marginal (M : EMModel Θ E Y)
-(θ : Θ) (y : Y) : M.marginal θ y > 0 := by
+(θ : Θ) (y : Y) : 0 < M.marginal θ y := by
   unfold EMModel.marginal
-  change 0 < ∑ x ∈ Finset.univ, M.joint θ (x, y)
   rw [Finset.sum_pos_iff]
   have hE : Nonempty E := inferInstance
   rcases hE with ⟨x0⟩
@@ -54,7 +68,7 @@ theorem EMModel.noninf_marginal (M : EMModel Θ E Y) : ∀ θ y, M.marginal θ y
   intro x hx
   exact PMF.apply_ne_top (M.joint θ) (x, y)
 
-theorem EMModel.pos_posterior (M : EMModel Θ E Y) : ∀ θ x y, M.posterior θ x y > 0 := by
+theorem EMModel.pos_posterior (M : EMModel Θ E Y) : ∀ θ x y, 0 < M.posterior θ x y := by
   intro θ x y
   unfold EMModel.posterior
   apply ENNReal.div_pos
