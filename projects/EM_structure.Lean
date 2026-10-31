@@ -117,6 +117,13 @@ theorem EMModel.posterior_sum_to_one (M : EMModel Θ E Y) :
   · rw [← EMModel.marginal]
     exact M.finite_marginal θ y
 
+theorem EMModel.mul_div_posterior (M : EMModel Θ E Y) (θ θ_old : Θ) (x : E) (y : Y) :
+M.joint θ (x, y) =  M.posterior θ_old  x y * (M.joint θ (x, y) / M.posterior θ_old x y) := by
+  symm
+  apply ENNReal.mul_div_cancel
+  · apply ne_of_gt
+    exact M.pos_posterior θ_old x y
+  · exact M.finite_posterior θ_old x y
 
 /-- Main result: The marginal log-likelihood is non-decreasing under an EM sequence of θ updates -/
 theorem EMModel.loglik_mono (M: EMModel Θ E Y)
