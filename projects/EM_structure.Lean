@@ -33,6 +33,11 @@ noncomputable def EMModel.marginal (M : EMModel Θ E Y)
 (θ : Θ) (y : Y) : ENNReal :=
 ∑ x : E, M.joint θ (x, y)
 
+/-- The marginal log-likelihood of observation y under parameter θ. -/
+noncomputable def EMModel.loglik (M : EMModel Θ E Y)
+    (θ : Θ) (y : Y) : ℝ :=
+  Real.log (M.marginal θ y).toReal
+
 /-- The posterior distribution of the latent variable x given the obervation y
 under the model parameter θ -/
 noncomputable def EMModel.posterior (M : EMModel Θ E Y)
@@ -114,4 +119,8 @@ theorem EMModel.posterior_sum_to_one (M : EMModel Θ E Y) :
 
 
 /-- Main result: The marginal log-likelihood is non-decreasing under an EM sequence of θ updates -/
-theorem EMModel.loglik_mono (M: EMModel Θ E Y) :
+theorem EMModel.loglik_mono (M: EMModel Θ E Y)
+(y : Y) (θs : ℕ → Θ) (hseq : M.IsQMaximizingSeq y θs) (t : ℕ) :
+M.loglik (θs t) y ≤ M.loglik (θs (t+1)) y := by
+  unfold EMModel.loglik
+  unfold EMModel.marginal
