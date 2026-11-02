@@ -1,6 +1,6 @@
 module
 
-public import Mathlib.Tactic -- imports all of the tactics in Lean's maths library
+public import Mathlib.Tactic
 public import Mathlib.Probability.ProbabilityMassFunction.Constructions
 public import Mathlib.Probability.ProbabilityMassFunction.Basic
 public import Mathlib.Analysis.Convex.Jensen
@@ -28,7 +28,7 @@ structure EMModel (Θ E Y : Type*) [Fintype E] [Nonempty E] where
   /-- I assume that the PMFs are always positive (i. e. non-zero) -/
   joint_pos : ∀ (θ : Θ) (x : E) (y : Y), 0 < joint θ (x, y)
 
-/-- Marginal likelihood of observing data y under the model parameter θ -/
+/-- Marginal likelihood of observation y under the model parameter θ -/
 noncomputable def EMModel.marginal (M : EMModel Θ E Y)
 (θ : Θ) (y : Y) : ENNReal :=
 ∑ x : E, M.joint θ (x, y)
@@ -69,9 +69,9 @@ def EMModel.IsQMaximizingSeq (M : EMModel Θ E Y)
 /-- Below I use the positive joint assumption and finiteness of E to prove that
 the marginal is positive and finite and the posterior is positive, finite and
 ∑ (x : E) p_θ(x | y) = 1, i. e. the posterior is a valid probability distribution -/
-theorem EMModel.finite_marginal (M : EMModel Θ E Y) : ∀ θ y, M.marginal θ y ≠ ∞ := by
+theorem EMModel.finite_marginal (M : EMModel Θ E Y)
+(θ : Θ) (y : Y) : M.marginal θ y ≠ ∞ := by
   unfold EMModel.marginal
-  intro θ y
   rw [ENNReal.sum_ne_top]
   intro x hx
   exact PMF.apply_ne_top (M.joint θ) (x, y)
@@ -87,26 +87,26 @@ theorem EMModel.pos_marginal (M : EMModel Θ E Y)
   · exact Finset.mem_univ x0
   · exact M.joint_pos θ x0 y
 
-theorem EMModel.pos_posterior (M : EMModel Θ E Y) : ∀ θ x y, 0 < M.posterior θ x y := by
-  intro θ x y
+#check Finset.mem_univ
+
+theorem EMModel.pos_posterior (M : EMModel Θ E Y)
+(θ : Θ) (x : E) (y : Y) : 0 < M.posterior θ x y := by
   unfold EMModel.posterior
   apply ENNReal.div_pos
   · apply ne_of_gt
     exact M.joint_pos θ x y
   · exact M.finite_marginal θ y
 
-
-theorem EMModel.finite_posterior (M : EMModel Θ E Y) : ∀ θ x y, M.posterior θ x y ≠ ∞ := by
-  intro θ x y
+theorem EMModel.finite_posterior (M : EMModel Θ E Y)
+(θ : Θ) (x : E) (y : Y) : M.posterior θ x y ≠ ∞ := by
   unfold EMModel.posterior
   apply ENNReal.div_ne_top
   · exact PMF.apply_ne_top (M.joint θ) (x, y)
   · apply ne_of_gt
     exact M.pos_marginal θ y
 
-theorem EMModel.posterior_sum_to_one (M : EMModel Θ E Y) :
-∀ θ y, ∑ x : E, M.posterior θ x y = 1 := by
-  intro θ y
+theorem EMModel.posterior_sum_to_one (M : EMModel Θ E Y)
+(θ : Θ) (y : Y) : ∑ x : E, M.posterior θ x y = 1 := by
   unfold EMModel.posterior
   rw [← ENNReal.sum_div]
   unfold EMModel.marginal
@@ -131,3 +131,15 @@ theorem EMModel.loglik_mono (M: EMModel Θ E Y)
 M.loglik (θs t) y ≤ M.loglik (θs (t+1)) y := by
   unfold EMModel.loglik
   unfold EMModel.marginal
+  have hfactor : (∑ x : E, M.joint (θs (t + 1)) (x, y)) =
+  ∑ x : E, M.posterior (θs t) x y * (M.joint (θs (t + 1)) (x, y) /
+    M.posterior (θs t) x y) := by
+    apply Finset.sum_congr
+    rfl
+    intro x hx
+    exact M.mul_div_posterior (θs (t+1)) (θs t) x y
+  conv_rhs =>
+    rw [hfactor, ENNReal.toReal_sum]
+    simp only [ENNReal.toReal_mul, ENNReal.toReal_div]
+
+#check Finset.sum_congr
