@@ -7,7 +7,10 @@ public import Mathlib.Analysis.Convex.Jensen
 public import Mathlib.Algebra.Order.BigOperators.Group.Finset
 public import Mathlib.Basic.ENNReal.Basic
 public import Mathlib.Basic.ENNReal.BigOperators
+public import Mathlib.Analysis.Convex.SpecificFunctions.Basic
 
+
+@[expose] public section
 /-!
 # EM Algorithm
 
@@ -17,7 +20,7 @@ latent-variable models.
 -/
 
 open scoped ENNReal
-set_option linter.unusedSectionVars false
+--set_option linter.unusedSectionVars false
 
 variable {Θ E Y : Type*} [Fintype E] [Nonempty E]
 
@@ -117,6 +120,22 @@ theorem EMModel.posterior_sum_to_one (M : EMModel Θ E Y)
   · rw [← EMModel.marginal]
     exact M.finite_marginal θ y
 
+/-- The real conversion of a joint probability is strictly positive. -/
+theorem EMModel.joint_toReal_pos (M : EMModel Θ E Y)
+    (θ : Θ) (x : E) (y : Y) :
+    0 < (M.joint θ (x, y)).toReal := by
+  apply ENNReal.toReal_pos
+  · exact ne_of_gt (M.joint_pos θ x y)
+  · exact PMF.apply_ne_top (M.joint θ) (x, y)
+
+/-- The real conversion of a posterior probability is strictly positive. -/
+theorem EMModel.posterior_toReal_pos (M : EMModel Θ E Y)
+    (θ : Θ) (x : E) (y : Y) :
+    0 < (M.posterior θ x y).toReal := by
+  apply ENNReal.toReal_pos
+  · exact ne_of_gt (M.pos_posterior θ x y)
+  · exact M.finite_posterior θ x y
+
 theorem EMModel.mul_div_posterior (M : EMModel Θ E Y) (θ θ_old : Θ) (x : E) (y : Y) :
 M.joint θ (x, y) =  M.posterior θ_old  x y * (M.joint θ (x, y) / M.posterior θ_old x y) := by
   symm
@@ -138,8 +157,50 @@ M.loglik (θs t) y ≤ M.loglik (θs (t+1)) y := by
     rfl
     intro x hx
     exact M.mul_div_posterior (θs (t+1)) (θs t) x y
+
+  let w : E → ℝ := fun x => (M.posterior (θs t) x y).toReal
+  let a : E → ℝ := fun x =>
+    (((M.joint (θs (t + 1))) (x, y)).toReal / (M.posterior (θs t) x y).toReal)
+
+  have h0 : ∀ x ∈ Finset.univ, 0 ≤ w x := by
+    intro x hx
+    positivity
+
+
+  have h1 : ∑ x : E, w x = 1 := by
+    unfold w
+    rw [← ENNReal.toReal_sum (fun x hx => M.finite_posterior (θs t) x y)]
+    rw [M.posterior_sum_to_one (θs t) y]
+    rfl
+
+  have hf : ConcaveOn ℝ (Set.Ioi (0 : ℝ)) Real.log :=
+    StrictConcaveOn.concaveOn strictConcaveOn_log_Ioi
+
+  have hmem : ∀ x ∈ Finset.univ, a x ∈ Set.Ioi (0 : ℝ) := by
+    intro x hx
+    unfold a
+    rw [Set.mem_Ioi]
+    apply div_pos
+    · exact M.joint_toReal_pos (θs (t + 1)) x y
+    · exact M.posterior_toReal_pos (θs t) x y
+
+
   conv_rhs =>
     rw [hfactor, ENNReal.toReal_sum]
     simp only [ENNReal.toReal_mul, ENNReal.toReal_div]
 
+
+
+
+
+
+
+
+
+
+
 #check Finset.sum_congr
+#check Real.strictConcaveOn_log_Ioi
+#check ConcaveOn.le_map_sum
+
+#lint
