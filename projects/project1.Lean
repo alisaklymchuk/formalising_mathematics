@@ -1,3 +1,9 @@
+/-
+Copyright (c) 2026 Your Name. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Your Name
+-/
+
 module
 
 public import Mathlib.Tactic
@@ -9,18 +15,33 @@ public import Mathlib.Basic.ENNReal.Basic
 public import Mathlib.Basic.ENNReal.BigOperators
 public import Mathlib.Analysis.Convex.SpecificFunctions.Basic
 
-
 @[expose] public section
+
 /-!
 # EM Algorithm
 
 This file formalises the monotonicity of the marginal log-likelihood
 under the Expectation-Maximisation algorithm for finite discrete
 latent-variable models.
--/
 
-open scoped ENNReal
---set_option linter.unusedSectionVars false
+## Mathematical setting
+
+We consider a finite, nonempty latent state space `E`, an observation
+space `Y`, and a parameter space `Θ`.
+
+For each parameter, the model specifies a joint probability mass
+function over `E × Y`. We assume strict positivity of the joint
+probability mass function, which ensures the marginal and posterior
+probabilities are also strictly positive.
+
+The marginal likelihood is obtained by summing over the latent states,
+and the posterior distribution is defined using Bayes' rule.
+
+## Main result
+
+We prove that the marginal log-likelihood is non-decreasing along
+a sequence of parameter updates that maximise the Q-function.
+-/
 
 variable {Θ E Y : Type*} [Fintype E] [Nonempty E]
 
@@ -57,7 +78,7 @@ of the marginal log-likelihood under parameter θ
 (next iteration of the algorithm finds the θ that maximizes Q)
 Q(θ, θ_old)=∑ (x ∈ E) p_{θ_old}(x | y) log p_θ(x,y). -/
 noncomputable def EMModel.Q (M : EMModel Θ E Y)
-(θ θ_old : Θ) (y : Y) :=
+(θ θ_old : Θ) (y : Y) : ℝ :=
 ∑ x : E, M.posterior θ_old x y * Real.log (M.joint θ x y)
 
 /-- IsQMaximizingStep defines what it means for a θ update to maximize the Q-function. -/
@@ -68,16 +89,9 @@ def EMModel.IsQMaximizer (M : EMModel Θ E Y)
 /-- IsQMaximizingSeq defines what it means for a sequence of θs to be a sequence of Q-maximizers -/
 def EMModel.IsQMaximizingSeq (M : EMModel Θ E Y)
 (y : Y) (θs : ℕ → Θ) : Prop :=
-  ∀ t : ℕ, M.IsQMaximizer y (θs t) (θs (t+1))
+  ∀ t : ℕ, M.IsQMaximizer y (θs (t + 1)) (θs t)
 
-#check Finset.sum_pos_iff
-
-#check inferInstance
-
-/-- Below I use the positive joint assumption and finiteness of E to prove that
-the marginal is positive and finite and the posterior is positive, finite and
-∑ (x : E) p_θ(x | y) = 1, i. e. the posterior is a valid probability distribution
- The real-valued joint probability is strictly positive. -/
+/-- The real-valued joint probability is strictly positive. -/
 theorem EMModel.pos_joint (M : EMModel Θ E Y)
   (θ : Θ) (x : E) (y : Y) :
   0 < M.joint θ x y := by
@@ -86,7 +100,7 @@ theorem EMModel.pos_joint (M : EMModel Θ E Y)
   · exact ne_of_gt (M.joint_pos_ennreal θ x y)
   · exact PMF.apply_ne_top (M.joint_ennreal θ) (x, y)
 
-
+/-- Marginal distribution is strictly positive -/
 theorem EMModel.pos_marginal (M : EMModel Θ E Y)
 (θ : Θ) (y : Y) : 0 < M.marginal θ y := by
   unfold EMModel.marginal
@@ -95,6 +109,7 @@ theorem EMModel.pos_marginal (M : EMModel Θ E Y)
     exact M.pos_joint θ x y
   · exact Finset.univ_nonempty
 
+/-- Posterior distribution is strictly positive -/
 theorem EMModel.pos_posterior (M : EMModel Θ E Y)
 (θ : Θ) (x : E) (y : Y) : 0 < M.posterior θ x y := by
   unfold EMModel.posterior
@@ -102,6 +117,8 @@ theorem EMModel.pos_posterior (M : EMModel Θ E Y)
   · exact M.pos_joint θ x y
   · exact M.pos_marginal θ y
 
+/-- The sum over x ∈ E of posterior distribution is 1
+(Since posterior is a probability distribution of x, and PMF sum to one) -/
 theorem EMModel.posterior_sum_to_one (M : EMModel Θ E Y)
 (θ : Θ) (y : Y) : ∑ x : E, M.posterior θ x y = 1 := by
   unfold EMModel.posterior
@@ -111,24 +128,37 @@ theorem EMModel.posterior_sum_to_one (M : EMModel Θ E Y)
   · rw [← EMModel.marginal]
     exact ne_of_gt (M.pos_marginal θ y)
 
-theorem EMModel.mul_div_posterior (M : EMModel Θ E Y) (θ θ_old : Θ) (x : E) (y : Y) :
-M.joint θ x y =  M.posterior θ_old  x y * (M.joint θ x y / M.posterior θ_old x y) := by
+/-- The joint distribution that be multiplied and divided by posterior
+(This is needed at the begginning of the proof) -/
+theorem EMModel.mul_div_posterior (M : EMModel Θ E Y)
+(θ θ_old : Θ) (x : E) (y : Y) :
+M.joint θ x y = M.posterior θ_old  x y *
+(M.joint θ x y / M.posterior θ_old x y) := by
   symm
   rw [mul_comm]
   apply div_mul_cancel₀
   apply ne_of_gt
   exact M.pos_posterior θ_old x y
 
-theorem EMModel.log_posterior_eq (M : EMModel Θ E Y) (θ : Θ) (x : E) (y : Y) :
-Real.log (M.posterior θ x y) = Real.log (M.joint θ x y) - M.loglik θ y := by
+/-- By definition of posterior (equivalent to Bayes rule) and property of log,
+log p(x | y) = log (p(x, y) / p(y)) = log p(x, y) - logp(y) -/
+theorem EMModel.log_posterior_eq (M : EMModel Θ E Y)
+(θ : Θ) (x : E) (y : Y) :
+Real.log (M.posterior θ x y) =
+Real.log (M.joint θ x y) - M.loglik θ y := by
   unfold EMModel.posterior EMModel.loglik
   rw [Real.log_div]
   · exact ne_of_gt (M.pos_joint θ x y)
   · exact ne_of_gt (M.pos_marginal θ y)
 
-theorem EMModel.jensen_log_posterior (M : EMModel Θ E Y) (θ θ_old : Θ) (y : Y) :
-(∑ x : E, M.posterior θ_old x y * Real.log (M.joint θ x y / M.posterior θ_old x y)) ≤
-Real.log (∑ x : E, M.posterior θ_old x y * (M.joint θ x y / M.posterior θ_old x y)) := by
+/-- Weighted Jensen's inequality applied to the concave log function,
+weights p_{θ_old}(x | y) and  argument p_θ(x, y) / p_{θ_old}(x | y) -/
+theorem EMModel.jensen_log_posterior (M : EMModel Θ E Y)
+(θ θ_old : Θ) (y : Y) :
+(∑ x : E, M.posterior θ_old x y
+* Real.log (M.joint θ x y / M.posterior θ_old x y)) ≤
+Real.log (∑ x : E, M.posterior θ_old x y
+* (M.joint θ x y / M.posterior θ_old x y)) := by
   have hf : ConcaveOn ℝ (Set.Ioi (0 : ℝ)) Real.log :=
   StrictConcaveOn.concaveOn strictConcaveOn_log_Ioi
   apply hf.le_map_sum (t := Finset.univ)
@@ -144,7 +174,7 @@ Real.log (∑ x : E, M.posterior θ_old x y * (M.joint θ x y / M.posterior θ_o
     · exact M.pos_posterior θ_old x y
 
 /-- Main result: The marginal log-likelihood is non-decreasing under an EM sequence of θ updates -/
-theorem EMModel.loglik_mono (M: EMModel Θ E Y)
+theorem EMModel.loglik_mono (M : EMModel Θ E Y)
 (y : Y) (θs : ℕ → Θ) (hseq : M.IsQMaximizingSeq y θs) (t : ℕ) :
 M.loglik (θs t) y ≤ M.loglik (θs (t+1)) y := by
   unfold EMModel.loglik
@@ -153,53 +183,32 @@ M.loglik (θs t) y ≤ M.loglik (θs (t+1)) y := by
   ∑ x : E, M.posterior (θs t) x y * (M.joint (θs (t + 1)) x y /
     M.posterior (θs t) x y) := by
     apply Finset.sum_congr
-    rfl
-    intro x hx
-    exact M.mul_div_posterior (θs (t+1)) (θs t) x y
-
-  let w : E → ℝ := fun x =>M.posterior (θs t) x y
-  let a : E → ℝ := fun x =>
-    ((M.joint (θs (t + 1))) x y) / (M.posterior (θs t) x y)
-
-  have h0 : ∀ x ∈ Finset.univ, 0 ≤ w x := by
-    intro x hx
-    positivity
-
-
-  have h1 : ∑ x : E, w x = 1 := by
-    unfold w
-    rw [← ENNReal.toReal_sum (fun x hx => M.finite_posterior (θs t) x y)]
-    rw [M.posterior_sum_to_one (θs t) y]
-    rfl
-
-  have hf : ConcaveOn ℝ (Set.Ioi (0 : ℝ)) Real.log :=
-    StrictConcaveOn.concaveOn strictConcaveOn_log_Ioi
-
-  have hmem : ∀ x ∈ Finset.univ, a x ∈ Set.Ioi (0 : ℝ) := by
-    intro x hx
-    unfold a
-    rw [Set.mem_Ioi]
-    apply div_pos
-    · exact M.joint_toReal_pos (θs (t + 1)) x y
-    · exact M.posterior_toReal_pos (θs t) x y
-
-
+    · rfl
+    · intro x hx
+      exact M.mul_div_posterior (θs (t+1)) (θs t) x y
+  rw [hfactor]
+  grw [← M.jensen_log_posterior (θs (t+1)) (θs t) y]
+  have hlogdiv (x : E) :
+  Real.log (M.joint (θs (t + 1)) x y / M.posterior (θs t) x y) =
+  Real.log (M.joint (θs (t + 1)) x y) -
+  Real.log (M.posterior (θs t) x y) := by
+    rw [Real.log_div (ne_of_gt (M.pos_joint (θs (t + 1)) x y))
+    (ne_of_gt (M.pos_posterior (θs t) x y))]
+  simp_rw [hlogdiv, mul_sub, M.log_posterior_eq (θs t) _ y]
+  simp_rw [mul_sub, ← sub_add]
+  rw [Finset.sum_add_distrib, Finset.sum_sub_distrib]
+  rw [← Finset.sum_mul, M.posterior_sum_to_one (θs t) y, one_mul]
   conv_rhs =>
-    rw [hfactor, ENNReal.toReal_sum]
-    simp only [ENNReal.toReal_mul, ENNReal.toReal_div]
-
-
-
-
-
-
-
-
-
-
-
-#check Finset.sum_congr
-#check Real.strictConcaveOn_log_Ioi
-#check ConcaveOn.le_map_sum
-
-#lint
+    lhs
+    lhs
+    change M.Q (θs (t+1)) (θs t) y
+  conv_rhs =>
+    lhs
+    rhs
+    change M.Q (θs t) (θs t) y
+  conv_lhs =>
+    change Real.log (M.marginal (θs t) y)
+    change M.loglik (θs t) y
+  have hQ : M.Q (θs t) (θs t) y ≤ M.Q (θs (t+1)) (θs t) y :=
+    hseq t (θs t)
+  linarith
