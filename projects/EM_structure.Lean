@@ -126,10 +126,22 @@ Real.log (M.posterior θ x y) = Real.log (M.joint θ x y) - M.loglik θ y := by
   · exact ne_of_gt (M.pos_joint θ x y)
   · exact ne_of_gt (M.pos_marginal θ y)
 
-theorem EMModel.jensen_log_posterior (M : EMModel Θ E Y) (θ θ_old : Θ) (x : E) (y : Y) :
-Real.log (∑ x, M.posterior θ_old x y * (M.joint θ x y / M.posterior θ_old x y)) ≤
-∑ x, M.posterior θ_old x y * Real.log ((M.joint θ x y / M.posterior θ_old x y)) := by
-
+theorem EMModel.jensen_log_posterior (M : EMModel Θ E Y) (θ θ_old : Θ) (y : Y) :
+(∑ x : E, M.posterior θ_old x y * Real.log (M.joint θ x y / M.posterior θ_old x y)) ≤
+Real.log (∑ x : E, M.posterior θ_old x y * (M.joint θ x y / M.posterior θ_old x y)) := by
+  have hf : ConcaveOn ℝ (Set.Ioi (0 : ℝ)) Real.log :=
+  StrictConcaveOn.concaveOn strictConcaveOn_log_Ioi
+  apply hf.le_map_sum (t := Finset.univ)
+    (w := fun x : E => M.posterior θ_old x y)
+    (p := fun x : E => M.joint θ x y / M.posterior θ_old x y)
+  · intro x hx
+    exact le_of_lt (M.pos_posterior θ_old x y)
+  · exact M.posterior_sum_to_one θ_old y
+  · intro x hx
+    rw [Set.mem_Ioi]
+    apply div_pos
+    · exact M.pos_joint θ x y
+    · exact M.pos_posterior θ_old x y
 
 /-- Main result: The marginal log-likelihood is non-decreasing under an EM sequence of θ updates -/
 theorem EMModel.loglik_mono (M: EMModel Θ E Y)
