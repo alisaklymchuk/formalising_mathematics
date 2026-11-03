@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 Your Name. All rights reserved.
+Copyright (c) 2026 Alisa Klymchuk. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Your Name
+Authors: Alisa Klymchuk
 -/
 
 module
@@ -48,14 +48,14 @@ variable {Θ E Y : Type*} [Fintype E] [Nonempty E]
 /-- A finite latent-variable model with a strictly positive joint probability mass function. -/
 structure EMModel (Θ E Y : Type*) [Fintype E] [Nonempty E] where
   /-- joint defines the joint probability mass function for a given parameter θ -/
-  joint_ennreal : Θ → PMF (E × Y)
+  jointennreal : Θ → PMF (E × Y)
   /-- I assume that the PMFs are always positive (i. e. non-zero) -/
-  joint_pos_ennreal : ∀ (θ : Θ) (x : E) (y : Y), 0 < joint_ennreal θ (x, y)
+  joint_pos_ennreal : ∀ (θ : Θ) (x : E) (y : Y), 0 < jointennreal θ (x, y)
 
 /-- Real-valued joint -/
 noncomputable def EMModel.joint (M : EMModel Θ E Y)
 (θ : Θ) (x : E) (y : Y) : ℝ :=
-(M.joint_ennreal θ (x, y)).toReal
+(M.jointennreal θ (x, y)).toReal
 
 /-- Marginal likelihood of observation y under the model parameter θ -/
 noncomputable def EMModel.marginal (M : EMModel Θ E Y)
@@ -98,7 +98,7 @@ theorem EMModel.pos_joint (M : EMModel Θ E Y)
   unfold EMModel.joint
   apply ENNReal.toReal_pos
   · exact ne_of_gt (M.joint_pos_ennreal θ x y)
-  · exact PMF.apply_ne_top (M.joint_ennreal θ) (x, y)
+  · exact PMF.apply_ne_top (M.jointennreal θ) (x, y)
 
 /-- Marginal distribution is strictly positive -/
 theorem EMModel.pos_marginal (M : EMModel Θ E Y)
@@ -142,7 +142,7 @@ M.joint θ x y = M.posterior θ_old  x y *
 
 /-- By definition of posterior (equivalent to Bayes rule) and property of log,
 log p(x | y) = log (p(x, y) / p(y)) = log p(x, y) - logp(y) -/
-theorem EMModel.log_posterior_eq (M : EMModel Θ E Y)
+theorem EMModel.log_bayes (M : EMModel Θ E Y)
 (θ : Θ) (x : E) (y : Y) :
 Real.log (M.posterior θ x y) =
 Real.log (M.joint θ x y) - M.loglik θ y := by
@@ -175,7 +175,7 @@ Real.log (∑ x : E, M.posterior θ_old x y
 
 /-- Main result: The marginal log-likelihood is non-decreasing under an EM sequence of θ updates -/
 theorem EMModel.loglik_mono (M : EMModel Θ E Y)
-(y : Y) (θs : ℕ → Θ) (hseq : M.IsQMaximizingSeq y θs) (t : ℕ) :
+(y : Y) (θs : ℕ → Θ) (hseq : M.IsQMaximizingSeq y θs) {t : ℕ} :
 M.loglik (θs t) y ≤ M.loglik (θs (t+1)) y := by
   unfold EMModel.loglik
   unfold EMModel.marginal
@@ -194,7 +194,7 @@ M.loglik (θs t) y ≤ M.loglik (θs (t+1)) y := by
   Real.log (M.posterior (θs t) x y) := by
     rw [Real.log_div (ne_of_gt (M.pos_joint (θs (t + 1)) x y))
     (ne_of_gt (M.pos_posterior (θs t) x y))]
-  simp_rw [hlogdiv, mul_sub, M.log_posterior_eq (θs t) _ y]
+  simp_rw [hlogdiv, mul_sub, M.log_bayes (θs t) _ y]
   simp_rw [mul_sub, ← sub_add]
   rw [Finset.sum_add_distrib, Finset.sum_sub_distrib]
   rw [← Finset.sum_mul, M.posterior_sum_to_one (θs t) y, one_mul]
@@ -212,3 +212,5 @@ M.loglik (θs t) y ≤ M.loglik (θs (t+1)) y := by
   have hQ : M.Q (θs t) (θs t) y ≤ M.Q (θs (t+1)) (θs t) y :=
     hseq t (θs t)
   linarith
+
+#lint
