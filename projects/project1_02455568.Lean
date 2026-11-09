@@ -100,6 +100,11 @@ theorem EMModel.pos_joint (M : EMModel Θ E Y)
   · exact ne_of_gt (M.joint_pos_ennreal θ x y)
   · exact PMF.apply_ne_top (M.jointennreal θ) (x, y)
 
+#check ENNReal.toReal_pos
+#check ne_of_gt
+#check Finset.sum_pos
+#check Finset.univ_nonempty
+
 /-- Marginal distribution is strictly positive -/
 theorem EMModel.pos_marginal (M : EMModel Θ E Y)
 (θ : Θ) (y : Y) : 0 < M.marginal θ y := by
@@ -113,9 +118,7 @@ theorem EMModel.pos_marginal (M : EMModel Θ E Y)
 theorem EMModel.pos_posterior (M : EMModel Θ E Y)
 (θ : Θ) (x : E) (y : Y) : 0 < M.posterior θ x y := by
   unfold EMModel.posterior
-  apply div_pos
-  · exact M.pos_joint θ x y
-  · exact M.pos_marginal θ y
+  apply div_pos (M.pos_joint θ x y) (M.pos_marginal θ y)
 
 /-- The sum over x ∈ E of posterior distribution is 1
 (Since posterior is a probability distribution of x, and PMF sum to one) -/
@@ -173,6 +176,9 @@ Real.log (∑ x : E, M.posterior θ_old x y
     · exact M.pos_joint θ x y
     · exact M.pos_posterior θ_old x y
 
+#check  Finset.sum_mul
+#check sub_add
+
 /-- Main result: The marginal log-likelihood is non-decreasing under an EM sequence of θ updates -/
 theorem EMModel.loglik_mono (M : EMModel Θ E Y)
 (y : Y) (θs : ℕ → Θ) (hseq : M.IsQMaximizingSeq y θs) {t : ℕ} :
@@ -198,14 +204,8 @@ M.loglik (θs t) y ≤ M.loglik (θs (t+1)) y := by
   simp_rw [mul_sub, ← sub_add]
   rw [Finset.sum_add_distrib, Finset.sum_sub_distrib]
   rw [← Finset.sum_mul, M.posterior_sum_to_one (θs t) y, one_mul]
-  conv_rhs =>
-    lhs
-    lhs
-    change M.Q (θs (t+1)) (θs t) y
-  conv_rhs =>
-    lhs
-    rhs
-    change M.Q (θs t) (θs t) y
+  rw [← EMModel.Q]
+  rw [← EMModel.Q]
   conv_lhs =>
     change Real.log (M.marginal (θs t) y)
     change M.loglik (θs t) y
