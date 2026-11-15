@@ -285,3 +285,54 @@ theorem Bijective.exists_myEquiv (f : α → β) (hf : Bijective f) :
     right_inv := by
       sorry }
   use e
+
+example {α β γ : Type*} {f : α → β} (g : β → γ)
+(hgf : Function.Surjective (g ∘ f)) (hg : Function.Injective g) :
+Function.Surjective f := by
+  intro b
+  rcases hgf (g b) with ⟨a, ha⟩
+  use a
+  specialize hg ((f a) b)
+
+variable {a b c d : Type*}
+
+example (a b c d : ℕ) :
+    (a + b) * (c + d) = (b + a) * c + (a + b) * d := by
+  rw [add_comm, mul_add]
+
+
+example {α : Type*} (s t : Set α) : s ∩ t ⊆ s ∪ t := by
+  intro a ha
+  rcases ha with ⟨as, aint⟩
+  left
+  exact as
+
+theorem Surjective.of_comp_left1 (hgf : Surjective (g ∘ f)) (hg : Injective g) :
+  Surjective f := by
+  intro x
+  specialize hgf (g x)
+  rcases hgf with ⟨a, h⟩
+  use a
+  apply hg
+  exact h
+
+
+theorem Surjective.of_comp_left2 (hgf : Surjective (g ∘ f)) (hg : Injective g) :
+  Surjective f := by
+  intro x
+  specialize hgf (g x)
+  rcases hgf with ⟨a, ha⟩
+  use a
+  specialize hg (f a) x ha
+  exact hg
+
+example (α β : Type*) (f : α → β) (hf : Function.Injective f) (x y : α)
+    (h : f x = f y) : False := by
+  specialize hf h
+  sorry
+
+example : Real.log (-5) = Real.log (5) := by
+  simp
+
+example : Real.sqrt (-4) = 0 := by
+  norm_num

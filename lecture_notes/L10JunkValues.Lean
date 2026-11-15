@@ -142,10 +142,15 @@ Mathlib solves this by first defining an `ENNReal` version of `infDist`.
 -/
 
 example (s : Set X) (x : X) : infDist x s = 0 := by
-  sorry
+  rcases isEmpty_or_nonempty X with hX | hX
+  · simp [infDist]
+  apply le_antisymm
+  · apply ciInf_le_of_le _ x
+
 
 example (x : ℝ) : orderOf x ≤ 2 := by
-  sorry
+  exact LinearOrderedRing.orderOf_le_two
+
 
 example (α : Type*) : ∑' a : α, 1 = Nat.card α := by
   sorry

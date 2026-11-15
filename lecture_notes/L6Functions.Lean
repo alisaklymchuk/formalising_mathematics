@@ -103,7 +103,7 @@ tactics as long as we can remember the following definitional equalities:
 `a ∈ ∅` is definitionally equal to `False`
 `a ∈ Set.univ` is definitionally equal to `True`.
 `a ∈ sᶜ` is definitionally equal to `a ∉ s` (notation for `¬ a ∈ s`).
-`a ∈ f '' s` is definitionally equal to `∃ b ∈ s, f b = a`.
+`b ∈ f '' s` is definitionally equal to `∃ a, a ∈ s, f a = b`.
 `a ∈ f⁻¹' s` is definitionally equal to `f a ∈ s`.
 
 To prove that two sets `s t : Set α` are equal, the tactic `ext a` will add an
@@ -280,16 +280,34 @@ example : s ∪ Set.univ = Set.univ := by
     exact trivial
 
 example : s ∩ ∅ = ∅ := by
-  sorry
+  ext a
+  constructor
+  · intro ha
+    rcases ha with ⟨hs, hnot⟩
+    exact hnot
+  · intro ha
+    constructor
+    · by_contra
+      exact ha
+    · exact ha
 
 example : s ∩ Set.univ = s := by
-  sorry
+  ext a
+  constructor
+  · intro ha
+    rcases ha with ⟨hs, hu⟩
+    exact hs
+  · intro ha
+    constructor
+    · exact ha
+    · exact trivial
 
 example : s ∪ t = t ∪ s := by
   sorry
 
 example : s ∩ t = t ∩ s := by
   sorry
+
 
 example : s ∪ t ∩ u = (s ∪ t) ∩ (s ∪ u) := by
   sorry
@@ -336,13 +354,17 @@ example : s ⊆ f ⁻¹' (f '' s) := by
 
 
 example : f '' (f ⁻¹' t) ⊆ t := by
-  intro a h
+  intro b h
+  rcases h with ⟨a, hat, hf⟩
+  rw [← hf]
+  exact hat
 
 
 example : f '' s ⊆ t ↔ s ⊆ f ⁻¹' t := by
   constructor
-  intro fst a as
-  specialize as a
+  intro him a as
+
+
 
 
 
@@ -356,7 +378,18 @@ example : id ⁻¹' s = s := by
 
 
 example : id '' s = s := by
-  sorry
+  ext a
+  constructor
+  · intro ha
+    rcases ha with ⟨b, hs, hid⟩
+    rw [← hid]
+    exact hs
+  · intro ha
+    use a
+    constructor
+    · exact ha
+    · rfl
+
 
 example : g ∘ f ⁻¹' u = f ⁻¹' (g ⁻¹' u) := by
   sorry
@@ -365,3 +398,13 @@ example : g ∘ f '' s = g '' (f '' s) := by
   sorry
 
 end
+
+example {α β : Type*} (f : α → β) (s t : Set α) :
+f '' (s ∩ t) ⊆ f '' s ∩ f '' t := by
+  intro a ha
+
+
+variable {x y : Type*}
+
+example (x y : ℝ) (h : x < y) : - y < - x := by
+  linarith
