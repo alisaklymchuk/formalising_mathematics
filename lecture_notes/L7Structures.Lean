@@ -292,7 +292,8 @@ Function.Surjective f := by
   intro b
   rcases hgf (g b) with ⟨a, ha⟩
   use a
-  specialize hg ((f a) b)
+  specialize hg ha
+  exact hg
 
 variable {a b c d : Type*}
 

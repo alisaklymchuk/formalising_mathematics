@@ -188,6 +188,9 @@ example : s ⊆ s := by
   intro a ains
   exact ains
 
+example : s ⊆ t → t ⊆ u → s ⊆ u :=
+  fun hst htu _ as => htu (hst as)
+
 example : s ⊆ t → t ⊆ u → s ⊆ u := by
   intro SinT TinU a AinS
   specialize SinT AinS
@@ -201,10 +204,16 @@ example : s ⊆ s ∪ t := by
   left
   exact as
 
+example : s ∩ t ⊆ s :=
+  fun _ h => h.left
+
 example : s ∩ t ⊆ s := by
   intro a h
   rcases h with ⟨ains, aint⟩
   exact ains
+
+example : s ⊆ t → s ⊆ u → s ⊆ t ∩ u :=
+  fun st su _ as => ⟨st as, su as⟩
 
 
 example : s ⊆ t → s ⊆ u → s ⊆ t ∩ u := by
@@ -362,7 +371,15 @@ example : f '' (f ⁻¹' t) ⊆ t := by
 
 example : f '' s ⊆ t ↔ s ⊆ f ⁻¹' t := by
   constructor
-  intro him a as
+  · intro him a as
+    apply him
+    use a
+  · intro hinv b hb
+    rcases hb with ⟨a, as, hfa⟩
+    rw [← hfa]
+    specialize hinv as
+    exact hinv
+
 
 
 
@@ -392,16 +409,27 @@ example : id '' s = s := by
 
 
 example : g ∘ f ⁻¹' u = f ⁻¹' (g ⁻¹' u) := by
-  sorry
+  ext a
+  constructor
+  intro ha
+
 
 example : g ∘ f '' s = g '' (f '' s) := by
-  sorry
+  ext b
+  constructor
+  intro hb
 
-end
+
+
 
 example {α β : Type*} (f : α → β) (s t : Set α) :
 f '' (s ∩ t) ⊆ f '' s ∩ f '' t := by
   intro a ha
+  rcases ha with ⟨b, hb, hf⟩
+  rcases hb with ⟨hbs, hbt⟩
+  constructor
+  · use b
+  · use b
 
 
 variable {x y : Type*}
